@@ -1,0 +1,426 @@
+import datetime
+import pandas as pd
+import pandas_datareader as pdr
+import yfinance as yf
+from pandas_datareader import data as pdr
+import numpy as np
+
+# import matplotlib.pyplot as plt
+# src = "C:/Users/prasa/PycharmProjects/PortfolioResearch/"
+start = '2000-12-31'
+end = '2019-09-30'
+
+# end = datetime.date.today().strftime('%Y-%m-%d')
+# src = "C:/Users/prasa/PycharmProjects/PortfolioResearch/"
+src = "C:/Python_Adhoc/Trend_Trading/"
+yf.pdr_override()
+
+# class SignalResearch:
+#     symbol_df = pd.read_excel('universe.xlsx', sheet_name='large', index_col=[0])
+#     tickers = symbol_df.index.tolist()
+#     tickers = tickers[5:8]
+#
+#     def get_yahoo_data(self):
+#         self.ydata = pdr.get_data_yahoo(self.tickers, start=start, end=end)
+#         return self.ydata
+#
+#     def drawdown(self, data):
+#         self.returns = data.fillna(0)
+#         windx = self.returns.add(1).cumprod()
+#         prev_peaks = windx.cummax()
+#         dd = (windx - prev_peaks) / prev_peaks
+#         return dd.min()
+#
+#     def nperiod_signal(self, px_data, trade_signal, nper=252, horizon=5):
+#
+#         returns_dict = {}
+#         win_rate = []
+#         realized_ret = []
+#         realized_risk = []
+#         nof_trades = []
+#         max_ret = []
+#         min_ret = []
+#         total_trades = []
+#         dd_strategy = []
+#         dd_stocks = []
+#         exp_value = []
+#
+#         for symbol in self.tickers:
+#             adj_close = px_data['Adj Close', symbol].copy()
+#
+#             if trade_signal == 'high':
+#                 signal_data = px_data['High', symbol].copy()
+#                 nper_signal = signal_data.rolling(window=nper).apply(max)
+#             else:
+#                 signal_data = px_data['Low', symbol].copy()
+#                 # nper_signal = adj_close.rolling(window=nper).apply(min)
+#                 nper_signal = signal_data.rolling(window=nper).apply(min)
+#
+#             adj_start = nper_signal.dropna().index[0]
+#             trade_df = pd.DataFrame(index=nper_signal.index)
+#             position = 0
+#             trade_count = 1
+#             closing_counter = 0
+#             for counter in range(len(nper_signal)):
+#                 px = adj_close.iloc[counter]
+#                 hi_lo = nper_signal.iloc[counter-1]
+#
+#                 if pd.isna(hi_lo):
+#                     trade_df.loc[trade_df.index[counter], 'Trades'] = 'No Trade'
+#                     trade_df.loc[trade_df.index[counter], 'Entry'] = 0
+#                     trade_df.loc[trade_df.index[counter], 'Exit'] = 0
+#                     trade_df.loc[trade_df.index[counter], 'ClosingPx'] = 0
+#                     trade_df.loc[trade_df.index[counter], 'Returns'] = 0.0
+#                     trade_df.loc[trade_df.index[counter], 'HPR'] = 0.0
+#                     trade_df.loc[trade_df.index[counter], 'Comment'] = 'No Open Trades'
+#                     position = 0
+#
+#                 elif px > hi_lo and position == 0:
+#                     trade_df.loc[trade_df.index[counter], 'Trades'] = 'Position Open'
+#                     buy_px = adj_close.iloc[counter]
+#                     trade_df.loc[trade_df.index[counter], 'Entry'] = 1
+#                     trade_df.loc[trade_df.index[counter], 'Exit'] = 0
+#                     trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+#                     trade_df.loc[trade_df.index[counter], 'Returns'] = 0.0
+#                     trade_df.loc[trade_df.index[counter], 'HPR'] = 0.0
+#                     trade_df.loc[trade_df.index[counter], 'Comment'] = f"Opened trade #{trade_count}"
+#                     closing_counter = counter + horizon
+#                     position = 1
+#
+#                 elif counter < closing_counter and position == 1:
+#                     trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+#                     trade_df.loc[trade_df.index[counter], 'Returns'] = adj_close.iloc[counter] \
+#                                                                        / adj_close.iloc[counter - 1] - 1
+#
+#                 elif counter == closing_counter and position == 1:
+#                     trade_df.loc[trade_df.index[counter], 'Trades'] = 'Position Closed'
+#                     trade_df.loc[trade_df.index[counter], 'Exit'] = 1
+#                     trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+#                     trade_df.loc[trade_df.index[counter], 'Comment'] = f"Closed trade #{trade_count}"
+#                     trade_df.loc[trade_df.index[counter], 'Returns'] = adj_close.iloc[counter] \
+#                                                                        / adj_close.iloc[counter - 1] - 1
+#                     trade_df.loc[trade_df.index[counter], 'HPR'] = adj_close.iloc[counter] / buy_px - 1
+#                     position = 0
+#                     buy_px = 0.0
+#                     trade_count += 1
+#
+#                 else:
+#                     trade_df.loc[trade_df.index[counter], 'Returns'] = np.nan
+#
+#             hpr_return = trade_df[trade_df.HPR != 0].HPR.dropna()
+#             gt_zero = hpr_return > 0
+#             perc_positive = gt_zero.sum() / gt_zero.count()
+#             win_rate.append(perc_positive)
+#             realized_ret.append(trade_df[trade_df.Trades == 'Position Closed'].HPR.mean())
+#             realized_risk.append(trade_df[trade_df.Trades == 'Position Closed'].HPR.std())
+#             nof_trades.append(trade_df[trade_df.Trades == 'Position Closed'].HPR.count())
+#             max_ret.append(trade_df[trade_df.Trades == 'Position Closed'].HPR.max())
+#             min_ret.append(trade_df[trade_df.Trades == 'Position Closed'].HPR.min())
+#             dd_strategy.append(self.drawdown(trade_df.HPR))
+#             dd_stocks.append(self.drawdown(adj_close.pct_change().fillna(0)))
+#             pos_mean = hpr_return[hpr_return>0].mean()
+#             neg_mean = hpr_return[hpr_return<0].mean()
+#             exp_value.append(perc_positive * pos_mean + (1-perc_positive) * neg_mean)
+#             returns_dict.update({symbol: trade_df.Returns})
+#             year = horizon / 250
+#             ann_ret = [(1 + r) ** (1 / year) - 1 for r in realized_ret]
+#             ann_risk = [s * np.sqrt(1 / year) for s in realized_risk]
+#             total_trades.append(len(hpr_return))
+#
+#         arr = np.array([nof_trades, realized_ret, realized_risk, ann_ret, ann_risk, win_rate, max_ret, min_ret,
+#                         dd_strategy, dd_stocks, exp_value])
+#         dff = pd.DataFrame(arr.T, index=self.tickers, columns=['#Trades', 'MRR', 'MSD', 'Annualized Return',
+#                                                                'Annualized Risk', 'Win Ratio', 'Best Return',
+#                                                                'Worst Return', 'DD_Strategy', 'DD_Asset',
+#                                                                'Expected Value'])
+#         dff[['MRR', 'MSD', 'Annualized Return', 'Annualized Risk', 'Win Ratio', 'Best Return', 'Worst Return',
+#              'DD_Strategy', 'DD_Asset']] = \
+#             dff[['MRR', 'MSD', 'Annualized Return', 'Annualized Risk', 'Win Ratio', 'Best Return', 'Worst Return',
+#                  'DD_Strategy', 'DD_Asset']]. \
+#                 applymap(lambda x: "{:.2%}".format(x))
+#
+#         dff['Lookback Window/Holding Period'] = f"{nper} days / {horizon} days"
+#
+#         eqw_portfolio = pd.DataFrame(returns_dict)
+#         eqw_ann_ret = eqw_portfolio.fillna(0).mean(axis=1).mean() * 250
+#         eqw_ann_std = eqw_portfolio.fillna(0).mean(axis=1).std() * np.sqrt(250)
+#         port_cols = ['Annualized Returns', 'Annualized Risk']
+#         port_df = pd.DataFrame([eqw_ann_ret, eqw_ann_std], columns=[f"{nper} days / {horizon} days"], index=port_cols)
+#         return dff, port_df
+#
+#     def run_main(self, tradeSig):
+#         objSignal = SignalResearch()
+#         yahoo_data = self.get_yahoo_data()
+#         comb_df = pd.DataFrame()
+#         comb_port = pd.DataFrame()
+#         for win in [30, 45, 90]:
+#             for horizon in [30]:
+#                 print("For lookback {} days and HPR {}".format(win, horizon))
+#                 data_frame, portfolio = objSignal.nperiod_signal(yahoo_data, tradeSig, win, horizon)
+#                 comb_df = pd.concat([comb_df, data_frame])
+#                 comb_port = pd.concat([comb_port, portfolio], axis=1)
+#
+#         grouped_df = comb_df.groupby(['Lookback Window/Holding Period', comb_df.index]).last()
+#         grouped_df.to_html('holdings.html')
+#         grouped_df.to_csv('holdings_large.csv')
+#
+#         comb_port.loc['Annualized Returns', 'Eqw Portfolio'] = yahoo_data['Adj Close'].pct_change().fillna(0).mean(
+#             axis=1).mean() * 250
+#
+#         comb_port.loc['Annualized Risk', 'Eqw Portfolio'] = yahoo_data['Adj Close'].pct_change().fillna(0).mean(
+#             axis=1).std() * np.sqrt(250)
+#
+#         comb_port = comb_port.T
+#         comb_port.loc[:, 'Sharpe'] = comb_port.iloc[:, 0] / comb_port.iloc[:, 1]
+#         comb_port = comb_port.applymap(lambda x: "{:.2%}".format(x))
+#         comb_port.to_html('portfolios.html')
+#         print('test')
+
+class tradeSignal:
+    symbol_df = pd.read_excel(src + 'universe.xlsx', sheet_name='high_low', index_col=[0])
+    tickers = symbol_df.index.tolist()
+    # tickers = tickers[:5]
+
+    def get_yahoo_data(self):
+        ydata = pdr.get_data_yahoo(self.tickers, start=start, end=end)
+        open = ydata['Open']
+        high = ydata['High']
+        low = ydata['Low']
+        close = ydata['Close']
+        adjClose = ydata['Adj Close']
+        volume = ydata['Volume']
+
+        open.to_csv(src + 'open.csv')
+        high.to_csv(src + 'high.csv')
+        low.to_csv(src + 'low.csv')
+        close.to_csv(src + 'close.csv')
+        adjClose.to_csv(src + 'aclose.csv')
+        volume.to_csv(src + 'volume.csv')
+
+        # return self.ydata
+
+    def drawdown(self, data):
+        self.returns = data.fillna(0)
+        windx = self.returns.add(1).cumprod()
+        prev_peaks = windx.cummax()
+        dd = (windx - prev_peaks) / prev_peaks
+        return dd.min()
+
+    def nperiod_signal(self, px_data, bm_data, trade_signal, nper=252, horizon=5):
+
+        returns_dict = {}
+        win_rate=[]
+        realized_ret = []
+        realized_risk = []
+        nof_trades = []
+        max_ret = []
+        min_ret = []
+        total_trades = []
+        dd_strategy = []
+        dd_stocks = []
+        exp_val = []
+        realized_bm = []
+
+        for symbol in self.tickers[:-1]:
+            adj_close = px_data[symbol].copy()
+            if trade_signal == 'high':
+                nper_signal = adj_close.rolling(window=nper).apply(max)
+            else:
+                nper_signal = adj_close.rolling(window=nper).apply(min)
+
+            adj_start = nper_signal.dropna().index[0]
+            trade_df = pd.DataFrame(index=nper_signal.index)
+            position = 0
+            trade_count = 1
+            closing_counter = 0
+            for counter in range(len(nper_signal)):
+                px = adj_close.iloc[counter]
+                hi_lo = nper_signal.iloc[counter]
+                bm_px = bm_data.iloc[counter]
+
+                if pd.isna(hi_lo):
+                    trade_df.loc[trade_df.index[counter], 'Trades'] = 'No Trade'
+                    trade_df.loc[trade_df.index[counter], 'Entry'] = 0
+                    trade_df.loc[trade_df.index[counter], 'Exit'] = 0
+                    trade_df.loc[trade_df.index[counter], 'bm_closingpx'] = 0
+                    trade_df.loc[trade_df.index[counter], 'ClosingPx'] = 0
+                    trade_df.loc[trade_df.index[counter], 'Returns'] = 0.0
+                    trade_df.loc[trade_df.index[counter], 'HPR'] = 0.0
+                    trade_df.loc[trade_df.index[counter], 'Comment'] = 'No Open Trades'
+                    position = 0
+
+                elif px == hi_lo and position == 0:
+                    trade_df.loc[trade_df.index[counter], 'Trades'] = 'Position Open'
+                    buy_px = adj_close.iloc[counter]
+                    bm_price = bm_data.iloc[counter]
+                    trade_df.loc[trade_df.index[counter], 'Entry'] = 1
+                    trade_df.loc[trade_df.index[counter], 'Exit'] = 0
+                    trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+                    trade_df.loc[trade_df.index[counter], 'bm_closingpx'] = bm_px
+                    trade_df.loc[trade_df.index[counter], 'Returns'] = 0.0
+                    trade_df.loc[trade_df.index[counter], 'HPR'] = 0.0
+                    trade_df.loc[trade_df.index[counter], 'Comment'] = f"Opened trade #{trade_count}"
+                    closing_counter = counter + horizon
+                    position = 1
+
+                elif counter < closing_counter and position == 1:
+                    trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+                    trade_df.loc[trade_df.index[counter], 'bm_closingpx'] = bm_px
+                    trade_df.loc[trade_df.index[counter], 'Returns'] = adj_close.iloc[counter] \
+                                                                       / adj_close.iloc[counter - 1] - 1
+
+                elif counter == closing_counter and position == 1:
+                    trade_df.loc[trade_df.index[counter], 'Trades'] = 'Position Closed'
+                    trade_df.loc[trade_df.index[counter], 'Exit'] = 1
+                    trade_df.loc[trade_df.index[counter], 'ClosingPx'] = px
+                    trade_df.loc[trade_df.index[counter], 'bm_closingpx'] = bm_px
+                    trade_df.loc[trade_df.index[counter], 'Comment'] = f"Closed trade #{trade_count}"
+                    trade_df.loc[trade_df.index[counter], 'Returns'] = adj_close.iloc[counter] \
+                                                                       / adj_close.iloc[counter - 1] - 1
+                    trade_df.loc[trade_df.index[counter], 'HPR'] = adj_close.iloc[counter] / buy_px - 1
+                    trade_df.loc[trade_df.index[counter], 'bm_HPR'] = bm_data.iloc[counter] / bm_price - 1
+                    position = 0
+                    buy_px = 0.0
+                    bm_price = 0.0
+                    trade_count +=1
+
+                else:
+                    position == position
+                    trade_df.loc[trade_df.index[counter], 'Returns'] = np.nan
+
+            hpr_return = trade_df[trade_df.HPR!=0].HPR.dropna()
+            gt_zero = hpr_return>0
+            win_rate.append(gt_zero.sum()/gt_zero.count())
+            pos_mean = hpr_return[hpr_return>0].mean()
+            neg_mean = hpr_return[hpr_return < 0].mean()
+            expected_value = (win_rate[0] * pos_mean) + ((1 - win_rate[0]) * neg_mean)
+            exp_val.append(expected_value)
+            realized_ret.append(trade_df[trade_df.Trades=='Position Closed'].HPR.mean())
+            realized_risk.append(trade_df[trade_df.Trades=='Position Closed'].HPR.std())
+            realized_bm.append(trade_df[trade_df.HPR!=0].bm_HPR.dropna().mean())
+            nof_trades.append(trade_df[trade_df.Trades=='Position Closed'].HPR.count())
+            max_ret.append(trade_df[trade_df.Trades=='Position Closed'].HPR.max())
+            min_ret.append(trade_df[trade_df.Trades=='Position Closed'].HPR.min())
+            dd_strategy.append(self.drawdown(trade_df.HPR))
+            dd_stocks.append(self.drawdown(adj_close.pct_change().fillna(0)))
+
+            returns_dict.update({symbol:trade_df.Returns})
+            year = horizon / 250
+            ann_ret = [(1+r)**(1/year)-1 for r in realized_ret]
+            ann_risk = [s * np.sqrt(1 / year) for s in realized_risk]
+            total_trades.append(len(hpr_return))
+
+        arr = np.array([nof_trades, realized_ret, realized_risk ,ann_ret, ann_risk, win_rate, max_ret, min_ret,
+                        dd_strategy, dd_stocks, exp_val, realized_bm])
+        dff = pd.DataFrame(arr.T, index=self.tickers[:-1], columns=['#Trades', 'MRR','MSD', 'Annualized Return',
+                                                               'Annualized Risk', 'Win Ratio', 'Best Return',
+                                                               'Worst Return', 'DD_Strategy', 'DD_Asset',
+                                                               'Expected_Value', 'BM'])
+        dff[['MRR','MSD', 'Annualized Return', 'Annualized Risk', 'Win Ratio', 'Best Return', 'Worst Return',
+             'DD_Strategy', 'DD_Asset', 'BM']] = \
+            dff[['MRR','MSD', 'Annualized Return', 'Annualized Risk', 'Win Ratio', 'Best Return', 'Worst Return',
+                 'DD_Strategy', 'DD_Asset', 'BM']].\
+                applymap(lambda x: "{:.2%}".format(x))
+
+        dff['Lookback Window/Holding Period'] = f"{nper} days / {horizon} days"
+
+        eqw_portfolio = pd.DataFrame(returns_dict)
+        eqw_ann_ret = eqw_portfolio.fillna(0).mean(axis=1).mean() * 250
+        eqw_ann_std = eqw_portfolio.fillna(0).mean(axis=1).std() * np.sqrt(250)
+        port_cols = ['Annualized Returns', 'Annualized Risk']
+        port_df = pd.DataFrame([eqw_ann_ret, eqw_ann_std], columns=[f"{nper} days / {horizon} days"], index = port_cols)
+        return dff, port_df
+
+    def universe_selection(self, lookback, slope_period, lt_win):
+        # stock_px = self.get_yahoo_data()
+        stock_px = pd.read_csv(src + 'aclose.csv', index_col=[0], parse_dates=True)
+        stock_high = pd.read_csv(src + 'high.csv', index_col=[0], parse_dates=True)
+        pass_univ = []
+        date_list = []
+
+        for cname in self.tickers:
+            stock = stock_px[[cname]]
+            stock = stock.resample('W', closed='right').last()
+            stock['long_term'] = stock[cname].rolling(200).mean()
+            stock['int_term'] = stock[cname].rolling(50).mean()
+            stock['short_term'] = stock[cname].rolling(20).mean()
+            # stock = stock[['Adj Close','short_term', 'int_term', 'long_term']]
+            avg_delta = stock[['short_term', 'int_term']].subtract(stock['long_term'], axis=0)
+
+            # Condtion 1, delta between the averages positive for the last N weeks
+            avg_df = avg_delta[avg_delta >0].tail(lookback).count()
+
+            if avg_df.values.sum() == 2 * lookback:
+                cond1 = True
+            else:
+                cond1 = False
+            
+            #Condition2: Slope of LT, IT and ST averages should be positive
+            slope_df = stock[['short_term', 'int_term', 'long_term']].pct_change(periods=slope_period)
+            slope_cond = (slope_df.tail(1) > 0.0).sum()
+
+            if slope_cond.values.sum() == 3:
+                cond2 = True
+            else:
+                cond2 = False
+            highs = stock_high[[cname]].rolling(window=lt_win).apply(max)
+            high_dist = (highs.loc[highs.index[-1], cname] / stock_px.loc[stock_px.index[-1], cname]) - 1
+
+            if high_dist >= 0.1:
+                cond3 = True
+            else:
+                cond3 = False
+
+            if cond1 and cond2 and cond3:
+                pass_univ.append(cname)
+                date_list.append(stock_high.loc[stock_high.index[-250:], cname].idxmax())
+                print(cname)
+
+        return pass_univ, date_list
+
+    def trade_risk_reward(self, sel_univ, dts, lt_win=250, it_win=50, st_win=20):
+        aclose = pd.read_csv(src + 'aclose.csv', index_col=[0], parse_dates=True)
+        high = pd.read_csv(src + 'high.csv', index_col=[0], parse_dates=True)
+        low = pd.read_csv(src + 'low.csv', index_col=[0], parse_dates=True)
+        mov_avg = aclose.copy()
+        mov_avg_lt = mov_avg.rolling(lt_win).mean()
+        mov_avg_it= mov_avg.rolling(it_win).mean()
+        mov_avg_st = mov_avg.rolling(st_win).mean()
+        watchlist = []
+        for counter in range(len(sel_univ)):
+            highs = high[[sel_univ[counter]]].rolling(window=lt_win).apply(max)
+            # lows = low[[symbol]].rolling(window=lt_win).apply(min)
+            lows = low.loc[dts[counter]:, sel_univ[counter]].min()
+            date_delta = (aclose.index[-1] - dts[0]).days
+            ma_avg_st = mov_avg_st.loc[mov_avg_st.index[-1], sel_univ[counter]]
+            ma_avg_it = mov_avg_it.loc[mov_avg_it.index[-1], sel_univ[counter]]
+            ma_avg_lt = mov_avg_lt.loc[mov_avg_lt.index[-1], sel_univ[counter]]
+            ma_cond = ma_avg_st > ma_avg_it > ma_avg_lt
+            
+            if (date_delta >= 10) and ma_cond:
+                low1 = low.loc[low.index[-5:], sel_univ[counter]].min()
+                low2 = low.loc[low.index[-10:-5], sel_univ[counter]].min()
+                higher_low = low1 >low2
+                
+                high1 = high.loc[high.index[-5:], sel_univ[counter]].min()
+                high2 = high.loc[high.index[-10:-5], sel_univ[counter]].min()
+                higher_high = high1 > high2
+                
+                if higher_low and higher_high:
+                    watchlist.append(sel_univ[counter])
+
+            #check the low of the date  with last date, if less that 10, ignore
+            # dist_highs = (highs.loc[highs.index[-1], symbol] / aclose.loc[aclose.index[-1], symbol])-1
+            dist_lows = (aclose.loc[aclose.index[-1], sel_univ[counter]] / lows) - 1
+            print(highs)
+
+
+if __name__ == "__main__":
+#     objSignal = SignalResearch()
+#     objSignal.run_main('low')
+    
+    objSignal = tradeSignal()
+    # objSignal.get_yahoo_data()
+    selected_univ, list_dates = objSignal.universe_selection(10, 4, 250)
+    objSignal.trade_risk_reward(selected_univ, list_dates, 250)
+    print("test")
